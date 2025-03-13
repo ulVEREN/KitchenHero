@@ -4,7 +4,7 @@ import RowTable from "./RowTable";
 import DeleteModal from "./DeleteModal";
 import Leaderboard from "./leaderboard"; // ✅ Importer Leaderboard
 
-const API_URL = "http://localhost:5001";
+const API_URL = "https://kitchenherobackend.onrender.com";
 
 const TableComponent: React.FC = () => {
   const [rows, setRows] = useState<
