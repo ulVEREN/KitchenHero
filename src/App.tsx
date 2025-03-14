@@ -19,8 +19,8 @@ function App() {
           fontWeight: "bold", // Gjør teksten litt tydeligere
         }}
       >
-        Registrer aktivitet som gavner fellesskapet og tok mer enn 2 min. for
-        eksempel:
+        Registrer aktiviteter som gagner fellesskapet og tar mer enn 2 minutter.
+        For eksempel:
       </p>
       <ul
         style={{
@@ -30,9 +30,9 @@ function App() {
       >
         <div style={{ display: "inline-block", textAlign: "left" }}>
           <li>Ta inn/ut av oppvaskmaskin</li>
-          <li>Legge på plass pålegg etter felleslunsj</li>
+          <li>Rydde på plass pålegg etter felleslunsj</li>
           <li>
-            Gå på butikken for å handle basics som alle trenger (brød for eks)
+            Gå på butikken for å handle basics som alle trenger (brød for eks.)
           </li>
           <li>Tørke over alle bord og benker etter felleslunsj</li>
           <li>Rydde etter felles arrangementer</li>
