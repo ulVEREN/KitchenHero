@@ -193,7 +193,7 @@ const TableComponent: React.FC = () => {
           className="btn btn-info"
           onClick={() => setShowLeaderboard(!showLeaderboard)}
         >
-          📊 Historikk
+          {showLeaderboard ? "📆 Denne måned" : "📊 Historikk"}
         </button>
       </div>
 

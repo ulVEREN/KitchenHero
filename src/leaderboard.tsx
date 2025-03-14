@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-const API_URL = "http://localhost:5001"; // Backend-URL
+const API_URL = "https://kitchenherobackend.onrender.com"; // Backend-URL
 
 const Leaderboard: React.FC = () => {
   const [leaderboard, setLeaderboard] = useState<

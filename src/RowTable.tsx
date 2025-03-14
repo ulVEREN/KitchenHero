@@ -97,7 +97,7 @@ const RowTable: React.FC<Props> = ({
                       style={{ cursor: "pointer" }}
                       onClick={() => registerDay(row.id, dayStr)}
                     >
-                      {isRegistered ? "✔" : ""}
+                      {isRegistered ? "🦸" : ""}
                     </td>
                   );
                 })}
