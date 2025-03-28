@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import RegisterModal from "./RegisterModal";
 import RowTable from "./RowTable";
 import DeleteModal from "./DeleteModal";
-import Leaderboard from "./leaderboard"; // ✅ Importer Leaderboard
+import Leaderboard from "./leaderboard";
+import ConfirmModal from "./ConfirmModal";
 
 const API_URL = "https://kitchenherobackend.onrender.com";
 
@@ -12,43 +13,40 @@ const TableComponent: React.FC = () => {
   >([]);
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showLeaderboard, setShowLeaderboard] = useState(false); // ✅ Toggle Leaderboard
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+
+  const [confirmMessage, setConfirmMessage] = useState("");
+  const [confirmAction, setConfirmAction] = useState<() => void>(() => {});
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const today = new Date();
   const year = today.getFullYear();
   const month = today.getMonth() + 1;
-  const daysInMonth = new Date(year, month, 0).getDate(); // ✅ Antall dager i denne måneden
+  const daysInMonth = new Date(year, month, 0).getDate();
 
-  // 📌 Hent rader og registreringer
   useEffect(() => {
     fetch(`${API_URL}/rows`)
       .then((response) => {
-        if (!response.ok) {
-          throw new Error("Kunne ikke hente data");
-        }
+        if (!response.ok) throw new Error("Kunne ikke hente data");
         return response.json();
       })
-      .then(
-        (data: { id: number; name: string; registrations?: string[] }[]) => {
-          console.log("✅ Data hentet fra backend:", data);
-
-          setRows(
-            Array.isArray(data)
-              ? data.map((row) => ({
-                  id: row.id,
-                  name: row.name,
-                  registrations: Array.isArray(row.registrations)
-                    ? row.registrations
-                    : [], // ✅ Passer på at det alltid er en array
-                }))
-              : []
-          );
-        }
-      )
+      .then((data) => {
+        console.log("✅ Data hentet fra backend:", data);
+        setRows(
+          Array.isArray(data)
+            ? data.map((row) => ({
+                id: row.id,
+                name: row.name,
+                registrations: Array.isArray(row.registrations)
+                  ? row.registrations
+                  : [],
+              }))
+            : []
+        );
+      })
       .catch((error) => console.error("❌ Feil ved henting av data:", error));
   }, []);
 
-  // 📌 Legg til en ny rad
   const addRow = async () => {
     try {
       const response = await fetch(`${API_URL}/rows`, {
@@ -58,7 +56,7 @@ const TableComponent: React.FC = () => {
       });
 
       const savedRow = await response.json();
-      setRows([...rows, { ...savedRow, registrations: [] }]); // ✅ Ny rad starter uten registreringer
+      setRows([...rows, { ...savedRow, registrations: [] }]);
     } catch (error) {
       console.error("❌ Feil ved lagring av rad:", error);
     }
@@ -75,8 +73,6 @@ const TableComponent: React.FC = () => {
       }
 
       console.log(`🗑️ Rad med ID ${id} slettet fra databasen.`);
-
-      // 🔄 Oppdater frontend ved å fjerne raden fra state
       setRows((prevRows) => prevRows.filter((row) => row.id !== id));
       setShowDeleteModal(false);
     } catch (error) {
@@ -84,7 +80,6 @@ const TableComponent: React.FC = () => {
     }
   };
 
-  // 📌 Oppdater navnet i databasen
   const updateRowName = async (id: number, newName: string) => {
     try {
       const response = await fetch(`${API_URL}/rows/${id}`, {
@@ -105,74 +100,70 @@ const TableComponent: React.FC = () => {
     }
   };
 
-  // 📌 Registrere / fjerne en verdi for en dag
   const registerDay = async (rowId: number, date: string) => {
-    try {
-      const row = rows.find((r) => r.id === rowId);
-      if (!row) return;
+    const row = rows.find((r) => r.id === rowId);
+    if (!row) return;
 
-      const alreadyRegistered = row.registrations.includes(date);
+    const alreadyRegistered = row.registrations.includes(date);
+    const formattedDate = new Date(date).toLocaleDateString("no-NO");
 
-      if (alreadyRegistered) {
-        // 🔥 Slett registreringen hvis den allerede finnes
-        console.log("🗑️ Fjerner registrering fra backend:", { rowId, date });
+    const action = async () => {
+      try {
+        if (alreadyRegistered) {
+          const response = await fetch(`${API_URL}/registrations`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ rowId, date }),
+          });
 
-        const response = await fetch(`${API_URL}/registrations`, {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ rowId, date }),
-        });
+          if (!response.ok)
+            throw new Error("Feil ved fjerning av registrering");
 
-        if (!response.ok) {
-          throw new Error("Feil ved fjerning av registrering");
+          setRows((prevRows) =>
+            prevRows.map((row) =>
+              row.id === rowId
+                ? {
+                    ...row,
+                    registrations: row.registrations.filter((d) => d !== date),
+                  }
+                : row
+            )
+          );
+        } else {
+          const response = await fetch(`${API_URL}/registrations`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ rowId, date }),
+          });
+
+          if (!response.ok) throw new Error("Feil ved registrering");
+
+          setRows((prevRows) =>
+            prevRows.map((row) =>
+              row.id === rowId
+                ? { ...row, registrations: [...row.registrations, date] }
+                : row
+            )
+          );
         }
-
-        console.log("✅ Registrering fjernet fra backend");
-
-        // 🔄 Oppdater frontend-tilstanden
-        setRows((prevRows) =>
-          prevRows.map((row) =>
-            row.id === rowId
-              ? {
-                  ...row,
-                  registrations: row.registrations.filter((d) => d !== date),
-                }
-              : row
-          )
-        );
-      } else {
-        // ✅ Legg til registrering hvis den IKKE finnes fra før
-        console.log("📤 Sender registrering til backend:", { rowId, date });
-
-        const response = await fetch(`${API_URL}/registrations`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ rowId, date }),
-        });
-
-        if (!response.ok) {
-          throw new Error("Feil ved registrering av data");
-        }
-
-        console.log("✅ Registrering bekreftet av backend");
-
-        // 🔄 Oppdater frontend-tilstanden
-        setRows((prevRows) =>
-          prevRows.map((row) =>
-            row.id === rowId
-              ? { ...row, registrations: [...row.registrations, date] }
-              : row
-          )
-        );
+      } catch (error) {
+        console.error("❌ Feil ved registrering:", error);
+      } finally {
+        setShowConfirmModal(false);
       }
-    } catch (error) {
-      console.error("❌ Feil ved registrering:", error);
-    }
+    };
+
+    const message = alreadyRegistered
+      ? `Er du sikker på at du vil fjerne heltedåd for ${row.name} den ${formattedDate}?`
+      : `Er du sikker på at du vil registrere heltedåd for ${row.name} den ${formattedDate}?`;
+
+    setConfirmMessage(message);
+    setConfirmAction(() => action);
+    setShowConfirmModal(true);
   };
 
   return (
     <div className="container mt-4">
-      {/* Kontrollknapper */}
       <div className="mb-3">
         <button className="btn btn-primary me-2" onClick={addRow}>
           ➕ Legg til 🦸
@@ -197,34 +188,38 @@ const TableComponent: React.FC = () => {
         </button>
       </div>
 
-      {/* Leaderboard */}
       {showLeaderboard && <Leaderboard />}
 
-      {/* Tabellen */}
       {!showLeaderboard && (
         <RowTable
           rows={rows}
           daysInMonth={daysInMonth}
           registerDay={registerDay}
-          updateRowName={updateRowName} // ✅ Sender funksjonen videre
+          updateRowName={updateRowName}
         />
       )}
 
-      {/* Modaler */}
       <RegisterModal
         rows={rows}
         showModal={showModal}
         onClose={() => setShowModal(false)}
         registerToday={(rowId) =>
           registerDay(rowId, new Date().toISOString().split("T")[0])
-        } // ✅ Registrer for i dag
+        }
       />
 
       <DeleteModal
         rows={rows}
         showModal={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
-        deleteRow={deleteRow} // 🔥 Send riktig funksjon som prop
+        deleteRow={deleteRow}
+      />
+
+      <ConfirmModal
+        show={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={confirmAction}
+        message={confirmMessage}
       />
     </div>
   );
